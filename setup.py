@@ -11,12 +11,13 @@ with open(os.path.join(this_directory, "README.md"), encoding="utf-8") as f:
     long_description = f.read()
 
 # Read version from package
+import re
 version = {}
 with open(os.path.join(this_directory, "skong", "__init__.py"), encoding="utf-8") as f:
-    for line in f:
-        if line.startswith("__version__"):
-            exec(line, version)
-            break
+    content = f.read()
+    version_match = re.search(r'^__version__\s*=\s*["\']([^"\']*)["\']', content, re.MULTILINE)
+    if version_match:
+        version["__version__"] = version_match.group(1)
 
 setup(
     name="skong",
