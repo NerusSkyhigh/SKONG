@@ -163,10 +163,11 @@ def submit_jobs(
             )
             continue
 
-        # Submit via qsub
+        # Submit via qsub from inside the job directory.
+        # Pass the script name (not a prefixed path) to mirror the shell workflow.
         try:
             result = subprocess.run(
-                ["qsub", "-v", f"RESTART={restart}", str(job_file)],
+                ["qsub", "-v", f"RESTART={restart}", job_file.name],
                 capture_output=True,
                 text=True,
                 check=True,
