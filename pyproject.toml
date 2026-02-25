@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "skong"
+version = "0.1.0"
+description = "Lightweight tracking for computational projects."
+requires-python = ">=3.10"
+
+[project.scripts]
+skong = "skong.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
