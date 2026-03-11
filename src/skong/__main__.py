@@ -63,7 +63,7 @@ def _build_parser() -> argparse.ArgumentParser:
     # --- sub ---
     sub_p = sub.add_parser(
         "sub",
-        help="Submit INITIALIZED jobs via qsub.",
+        help="Submit INITIALIZED jobs via the detected scheduler.",
     )
     sub_p.add_argument(
         "limit",
@@ -74,8 +74,17 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     sub_p.add_argument(
         "--job",
-        default="job.pbs",
-        help="PBS script filename (default: job.pbs).",
+        default=None,
+        help=(
+            "Job script filename. Defaults to job.pbs (PBS) or "
+            "job.slurm (Slurm) based on scheduler detection."
+        ),
+    )
+    sub_p.add_argument(
+        "--scheduler",
+        choices=["auto", "pbs", "slurm"],
+        default="auto",
+        help="Scheduler to use (default: auto-detect).",
     )
     sub_p.add_argument(
         "--path",
@@ -86,7 +95,7 @@ def _build_parser() -> argparse.ArgumentParser:
     # --- continue ---
     cont_p = sub.add_parser(
         "continue",
-        help="Re-submit PARTIAL (incomplete) jobs via qsub.",
+        help="Re-submit PARTIAL (incomplete) jobs via the detected scheduler.",
     )
     cont_p.add_argument(
         "limit",
@@ -97,8 +106,17 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     cont_p.add_argument(
         "--job",
-        default="job.pbs",
-        help="PBS script filename (default: job.pbs).",
+        default=None,
+        help=(
+            "Job script filename. Defaults to job.pbs (PBS) or "
+            "job.slurm (Slurm) based on scheduler detection."
+        ),
+    )
+    cont_p.add_argument(
+        "--scheduler",
+        choices=["auto", "pbs", "slurm"],
+        default="auto",
+        help="Scheduler to use (default: auto-detect).",
     )
     cont_p.add_argument(
         "--path",
@@ -166,6 +184,7 @@ def main(argv: list[str] | None = None) -> None:
             Status.INITIALIZED,
             limit=args.limit,
             job_script=args.job,
+            scheduler=args.scheduler,
             path=args.path,
         )
         print(f"\n{len(results)} job(s) submitted.")
@@ -175,6 +194,7 @@ def main(argv: list[str] | None = None) -> None:
             Status.PARTIAL,
             limit=args.limit,
             job_script=args.job,
+            scheduler=args.scheduler,
             path=args.path,
         )
         print(f"\n{len(results)} job(s) re-submitted.")

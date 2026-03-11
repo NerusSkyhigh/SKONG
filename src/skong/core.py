@@ -2,10 +2,12 @@
 
 import json
 import os
+import re
+import shutil
 import subprocess
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Union
+from typing import Literal, Optional, Union, cast
 
 from .status import Status
 
@@ -96,6 +98,83 @@ _RED = "\033[0;31m"
 _RESET = "\033[0m"
 
 DEFAULT_JOB_SCRIPT = "job.pbs"
+DEFAULT_PBS_JOB_SCRIPT = "job.pbs"
+DEFAULT_SLURM_JOB_SCRIPT = "job.slurm"
+
+Scheduler = Literal["pbs", "slurm"]
+
+
+def detect_scheduler(preferred: str = "auto") -> Scheduler:
+    """Detect which scheduler should be used for job submissions.
+
+    Detection precedence (first match wins):
+    1) explicit ``preferred`` value (``pbs`` or ``slurm``)
+    2) ``SKONG_SCHEDULER`` environment variable
+    3) scheduler-specific allocation environment variables
+    4) command availability in ``PATH`` (``sbatch`` / ``qsub``)
+
+    When both scheduler binaries are available and no other hint exists,
+    Slurm is preferred by default.
+    """
+    preferred = preferred.strip().lower()
+    if preferred in {"pbs", "slurm"}:
+        return cast(Scheduler, preferred)
+    if preferred != "auto":
+        raise ValueError(
+            "Invalid scheduler value. Use one of: auto, pbs, slurm."
+        )
+
+    env_choice = os.getenv("SKONG_SCHEDULER", "").strip().lower()
+    if env_choice in {"pbs", "slurm"}:
+        return cast(Scheduler, env_choice)
+
+    if os.getenv("SLURM_JOB_ID") or os.getenv("SLURM_CLUSTER_NAME"):
+        return "slurm"
+    if os.getenv("PBS_JOBID") or os.getenv("PBS_O_HOST"):
+        return "pbs"
+
+    has_sbatch = shutil.which("sbatch") is not None
+    has_qsub = shutil.which("qsub") is not None
+
+    if has_sbatch and not has_qsub:
+        return "slurm"
+    if has_qsub and not has_sbatch:
+        return "pbs"
+    if has_sbatch and has_qsub:
+        return "slurm"
+
+    raise RuntimeError(
+        "Could not detect a scheduler automatically. "
+        "No 'sbatch' or 'qsub' command was found in PATH."
+    )
+
+
+def _default_job_script_for(scheduler: Scheduler) -> str:
+    """Return the default job filename for a given scheduler."""
+    if scheduler == "slurm":
+        return DEFAULT_SLURM_JOB_SCRIPT
+    return DEFAULT_PBS_JOB_SCRIPT
+
+
+def _submit_command(scheduler: Scheduler, restart: int, script_name: str) -> list[str]:
+    """Build the submit command for the selected scheduler."""
+    if scheduler == "slurm":
+        return ["sbatch", f"--export=ALL,RESTART={restart}", script_name]
+    return ["qsub", "-v", f"RESTART={restart}", script_name]
+
+
+def _extract_job_id(scheduler: Scheduler, stdout: str) -> str:
+    """Extract a numeric-ish job id from scheduler output."""
+    raw = stdout.strip()
+    if not raw:
+        return raw
+    if scheduler == "pbs":
+        # qsub usually returns something like "12345.pbs-server".
+        return raw.split(".")[0]
+
+    # sbatch usually returns "Submitted batch job 12345".
+    match = re.search(r"Submitted\s+batch\s+job\s+(\S+)", raw)
+    return match.group(1) if match else raw
 
 
 def list_status(
@@ -121,10 +200,11 @@ def submit_jobs(
     target_status: Status,
     *,
     limit: int = 10,
-    job_script: str = DEFAULT_JOB_SCRIPT,
+    job_script: Optional[str] = None,
+    scheduler: str = "auto",
     path: Union[str, Path, None] = None,
 ) -> list[dict]:
-    """Submit PBS jobs for sub-directories matching *target_status*.
+    """Submit jobs for sub-directories matching *target_status*.
 
     Parameters
     ----------
@@ -135,7 +215,10 @@ def submit_jobs(
     limit:
         Maximum number of jobs to submit.
     job_script:
-        Filename of the PBS script inside each sub-directory.
+        Filename of the scheduler script inside each sub-directory.
+        If omitted, uses ``job.pbs`` for PBS and ``job.slurm`` for Slurm.
+    scheduler:
+        Scheduler selection strategy: ``auto`` (default), ``pbs`` or ``slurm``.
     path:
         Parent directory to scan (defaults to cwd).
 
@@ -147,6 +230,8 @@ def submit_jobs(
     path = Path(path) if path else Path.cwd()
     restart = 1 if target_status == Status.PARTIAL else 0
     submitted: list[dict] = []
+    chosen_scheduler = detect_scheduler(scheduler)
+    effective_job_script = job_script or _default_job_script_for(chosen_scheduler)
 
     candidates = list_status(target_status, path=path)
 
@@ -155,37 +240,34 @@ def submit_jobs(
             print(f"{_RED}[INFO] Job limit reached. Stopping submission.{_RESET}")
             break
 
-        job_file = child / job_script
+        job_file = child / effective_job_script
         if not job_file.exists():
             print(
-                f"{_YELLOW}[WARNING] No {job_script} in {child.name}. "
+                f"{_YELLOW}[WARNING] No {effective_job_script} in {child.name}. "
                 f"Skipping.{_RESET}"
             )
             continue
 
-        # Submit via qsub from inside the job directory.
-        # Pass the script name (not a prefixed path) to mirror the shell workflow.
+        # Submit from inside the job directory and pass only the script name.
         try:
             result = subprocess.run(
-                ["qsub", "-v", f"RESTART={restart}", job_file.name],
+                _submit_command(chosen_scheduler, restart, job_file.name),
                 capture_output=True,
                 text=True,
                 check=True,
                 cwd=str(child),
             )
-            # qsub typically returns something like "12345.pbs-server"
-            raw_id = result.stdout.strip()
-            job_id = raw_id.split(".")[0] if raw_id else raw_id
+            job_id = _extract_job_id(chosen_scheduler, result.stdout)
         except FileNotFoundError:
             print(
-                f"{_RED}[ERROR] 'qsub' not found – are you on a cluster "
-                f"with PBS installed?{_RESET}"
+                f"{_RED}[ERROR] Submit command not found for scheduler "
+                f"'{chosen_scheduler}'.{_RESET}"
             )
             break
         except subprocess.CalledProcessError as exc:
             print(
-                f"{_RED}[ERROR] qsub failed for {child.name}: "
-                f"{exc.stderr.strip()}{_RESET}"
+                f"{_RED}[ERROR] Submission failed for {child.name}: "
+                f"{(exc.stderr or exc.stdout).strip()}{_RESET}"
             )
             continue
 
@@ -215,7 +297,7 @@ def submit_jobs(
         )
 
         print(
-            f"\t{_GREEN}[INFO] {job_script} submitted from {child.name} "
+            f"\t{_GREEN}[INFO] {effective_job_script} submitted from {child.name} "
             f"with ID: {job_id}{_RESET}"
         )
         submitted.append(
