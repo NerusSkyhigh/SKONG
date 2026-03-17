@@ -59,6 +59,27 @@ Re-submit partial jobs and let SKONG auto-detect:
 skong continue 5 --path .
 ```
 
+Describe all tracked folders grouped by status:
+
+```bash
+skong descr --path .
+```
+
+Only show statuses that have at least one folder:
+
+```bash
+skong descr --path . --non-empty-only
+```
+
+This prints one section per status, for example:
+
+```text
+--- DONE ---
+run_A
+run_B
+--- DONE COUNT 2 ---
+```
+
 Use environment override (helpful in scripts):
 
 ```bash

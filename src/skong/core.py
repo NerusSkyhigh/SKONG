@@ -196,6 +196,19 @@ def list_status(
     return matches
 
 
+def describe_statuses(
+    *,
+    path: Union[str, Path, None] = None,
+) -> dict[Status, list[Path]]:
+    """Return sub-directories grouped by status.
+
+    The mapping preserves ``Status`` declaration order, so callers can render a
+    stable report section for each status.
+    """
+    path = Path(path) if path else Path.cwd()
+    return {status: list_status(status, path=path) for status in Status}
+
+
 def submit_jobs(
     target_status: Status,
     *,

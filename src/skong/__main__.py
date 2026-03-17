@@ -4,7 +4,15 @@ import argparse
 import json
 import sys
 
-from .core import init, list_status, log, read_status, set_status, submit_jobs
+from .core import (
+    describe_statuses,
+    init,
+    list_status,
+    log,
+    read_status,
+    set_status,
+    submit_jobs,
+)
 from .status import Status
 
 
@@ -140,6 +148,22 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Parent directory to scan (default: current directory).",
     )
 
+    # --- descr ---
+    descr_p = sub.add_parser(
+        "descr",
+        help="Describe sub-directories grouped by status.",
+    )
+    descr_p.add_argument(
+        "--path",
+        default=".",
+        help="Parent directory to scan (default: current directory).",
+    )
+    descr_p.add_argument(
+        "--non-empty-only",
+        action="store_true",
+        help="Show only status sections that contain at least one directory.",
+    )
+
     return parser
 
 
@@ -207,6 +231,23 @@ def main(argv: list[str] | None = None) -> None:
         else:
             for d in dirs:
                 print(d.name)
+
+    elif args.command == "descr":
+        grouped = describe_statuses(path=args.path)
+        sections = []
+        for status in Status:
+            dirs = grouped[status]
+            if args.non_empty_only and not dirs:
+                continue
+            sections.append((status, dirs))
+
+        for idx, (status, dirs) in enumerate(sections):
+            print(f"--- {status.value} ---")
+            for d in dirs:
+                print(d.name)
+            print(f"--- {status.value} COUNT {len(dirs)} ---")
+            if idx < len(sections) - 1:
+                print()
 
 
 if __name__ == "__main__":
