@@ -31,6 +31,16 @@ def _require_initialized(path: Union[str, Path]) -> Path:
     return skong
 
 
+def valid_dir(path: Union[str, Path, None] = None) -> bool:
+    """Check if the given path is a valid skong project.
+
+    Returns True if the path contains a .skong directory, False otherwise.
+    Defaults to checking the current working directory if no path is provided.
+    """
+    path = Path(path) if path else Path.cwd()
+    return _skong_dir(path).is_dir()
+
+
 def init(path: Union[str, Path, None] = None) -> Path:
     """Initialize a .skong directory in *path* (defaults to cwd).
 
