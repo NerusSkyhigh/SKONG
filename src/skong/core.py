@@ -219,6 +219,33 @@ def describe_statuses(
     return {status: list_status(status, path=path) for status in Status}
 
 
+def _submission_candidates(target_status: Status, path: Path) -> list[Path]:
+    """Resolve candidate directories for submission.
+
+    If *path* is itself a tracked skong directory, only that directory is
+    considered and it must match *target_status*.
+    Otherwise, *path* is treated as a parent directory to scan.
+    """
+    if not path.exists():
+        raise FileNotFoundError(f"Path not found: {path.resolve()}")
+    if not path.is_dir():
+        raise NotADirectoryError(f"Path is not a directory: {path.resolve()}")
+
+    if valid_dir(path):
+        status = read_status(path)
+        if status == target_status:
+            return [path]
+        expected = target_status.value
+        current = status.value if status is not None else "UNKNOWN"
+        print(
+            f"{_YELLOW}[INFO] Skipping {path.name}: expected status {expected}, "
+            f"found {current}.{_RESET}"
+        )
+        return []
+
+    return list_status(target_status, path=path)
+
+
 def submit_jobs(
     target_status: Status,
     *,
@@ -253,10 +280,13 @@ def submit_jobs(
     path = Path(path) if path else Path.cwd()
     restart = 1 if target_status == Status.PARTIAL else 0
     submitted: list[dict] = []
+    candidates = _submission_candidates(target_status, path)
+
+    if not candidates:
+        return submitted
+
     chosen_scheduler = detect_scheduler(scheduler)
     effective_job_script = job_script or _default_job_script_for(chosen_scheduler)
-
-    candidates = list_status(target_status, path=path)
 
     for child in candidates:
         if limit <= 0:

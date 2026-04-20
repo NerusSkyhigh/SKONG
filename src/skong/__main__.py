@@ -97,7 +97,10 @@ def _build_parser() -> argparse.ArgumentParser:
     sub_p.add_argument(
         "--path",
         default=".",
-        help="Parent directory to scan (default: current directory).",
+        help=(
+            "Project directory to submit directly, or parent directory to scan "
+            "(default: current directory)."
+        ),
     )
 
     # --- continue ---
@@ -129,7 +132,10 @@ def _build_parser() -> argparse.ArgumentParser:
     cont_p.add_argument(
         "--path",
         default=".",
-        help="Parent directory to scan (default: current directory).",
+        help=(
+            "Project directory to submit directly, or parent directory to scan "
+            "(default: current directory)."
+        ),
     )
 
     # --- ls ---

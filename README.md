@@ -59,6 +59,16 @@ Re-submit partial jobs and let SKONG auto-detect:
 skong continue 5 --path .
 ```
 
+When `--path` points to a single tracked run directory, SKONG submits only
+that folder (if its status matches the command):
+
+```bash
+skong sub --path ~/project/runme
+skong continue --path ~/project/runme
+```
+
+If the folder is tracked but in a different state, SKONG skips it.
+
 Describe all tracked folders grouped by status:
 
 ```bash
