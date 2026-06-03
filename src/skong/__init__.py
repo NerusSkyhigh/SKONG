@@ -12,6 +12,7 @@ from .core import (
     submit_jobs,
 )
 from .status import Status
+from .utils import read_configurations
 
 __all__ = [
     "Status",
@@ -24,4 +25,5 @@ __all__ = [
     "read_status",
     "set_status",
     "submit_jobs",
+    "read_configurations",
 ]
