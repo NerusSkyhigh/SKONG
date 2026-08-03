@@ -1,0 +1,18 @@
+{
+    "dirname": "My computational project",
+    "project_slug": "{{ cookiecutter.dirname|lower|replace(' ', '-') }}",
+    "surname": "",
+    "name": "",
+    "email": "{{cookiecutter.name}}.{{cookiecutter.surname}}@unitn.it",
+    "username": "{{cookiecutter.name}}.{{cookiecutter.surname}}",
+    "git_remote": "https://gitlab.physics.unitn.it/{{cookiecutter.username}}/{{cookiecutter.project_slug}}.git",
+
+    "__prompts__": {
+        "dirname": "Insert the name of the project directory",
+        "surname": "Insert your surname",
+        "name": "Insert your name",
+        "email": "Insert your institutional email address",
+        "username": "Insert your username on the git server",
+        "git_remote": "Insert the remote git repository URL"
+    }
+}

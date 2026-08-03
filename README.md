@@ -1,7 +1,9 @@
 # SKONG
 
 SKONG (System for Keeping Organized Numerical Goals) is a lightweight Python CLI
-to track computational project states and submit batch jobs.
+to track computational project states and submit batch jobs.  
+It also provides a cookiecutter template for new projects.
+
 
 ## Scheduler-aware submission
 

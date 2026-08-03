@@ -1,0 +1,5 @@
+Git doesn't track empty folders so we need to place a .gitkeep file.
+Don't worry, cookiecutter will remove it when the project is generated.
+
+Here is a song for the inconvenience:
+https://www.youtube.com/watch?v=Q6is6K8jbho&t=4100s
