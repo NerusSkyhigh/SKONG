@@ -5,6 +5,8 @@
     "name": "",
     "email": "{{cookiecutter.name}}.{{cookiecutter.surname}}@unitn.it",
     "username": "{{cookiecutter.name}}.{{cookiecutter.surname}}",
+    "remote_server": "hpc.unitn.it",
+    "remote_folder": "/home/{{cookiecutter.username}}/projects/{{cookiecutter.project_slug}}",
     "git_remote": "https://gitlab.physics.unitn.it/{{cookiecutter.username}}/{{cookiecutter.project_slug}}.git",
 
     "__prompts__": {
@@ -13,6 +15,8 @@
         "name": "Insert your name",
         "email": "Insert your institutional email address",
         "username": "Insert your username on the git server",
+        "remote_server": "Insert the hostname of the remote HPC server",
+        "remote_folder": "Insert the remote folder path on the HPC server",
         "git_remote": "Insert the remote git repository URL"
     }
 }
